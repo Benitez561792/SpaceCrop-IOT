@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "author": "SpaceCrop Team — FIAP 2026",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -60,
+      "left": 240,
+      "attrs": {
+        "temperature": "24.5",
+        "humidity": "62"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_ok",
+      "top": 60,
+      "left": 310,
+      "attrs": {
+        "color": "green",
+        "label": "OK"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_alerta",
+      "top": 120,
+      "left": 310,
+      "attrs": {
+        "color": "red",
+        "label": "Alerta"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_dia",
+      "top": 180,
+      "left": 310,
+      "attrs": {
+        "color": "yellow",
+        "label": "DIA"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_noite",
+      "top": 240,
+      "left": 310,
+      "attrs": {
+        "color": "blue",
+        "label": "NOITE"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer1",
+      "top": 300,
+      "left": 310,
+      "attrs": {
+        "volume": "0.4"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "res1",
+      "top": 60,
+      "left": 250,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "res2",
+      "top": 120,
+      "left": 250,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "res_dia",
+      "top": 180,
+      "left": 250,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "res_noite",
+      "top": 240,
+      "left": 250,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "res_pullup",
+      "top": -60,
+      "left": 190,
+      "attrs": {
+        "value": "10000",
+        "label": "Pull-up DHT22"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-ssd1306",
+      "id": "oled1",
+      "top": -80,
+      "left": -160,
+      "attrs": {
+        "i2cAddress": "0x3c"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp32:TX0",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp32:RX0",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "dht1:VCC",
+      "esp32:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht1:GND",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "dht1:SDA",
+      "esp32:D15",
+      "green",
+      []
+    ],
+    [
+      "dht1:SDA",
+      "res_pullup:1",
+      "yellow",
+      []
+    ],
+    [
+      "res_pullup:2",
+      "esp32:3V3",
+      "red",
+      []
+    ],
+    [
+      "esp32:D2",
+      "res1:1",
+      "green",
+      []
+    ],
+    [
+      "res1:2",
+      "led_ok:A",
+      "green",
+      []
+    ],
+    [
+      "led_ok:C",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "esp32:D4",
+      "res2:1",
+      "red",
+      []
+    ],
+    [
+      "res2:2",
+      "led_alerta:A",
+      "red",
+      []
+    ],
+    [
+      "led_alerta:C",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "esp32:D26",
+      "res_dia:1",
+      "yellow",
+      []
+    ],
+    [
+      "res_dia:2",
+      "led_dia:A",
+      "yellow",
+      []
+    ],
+    [
+      "led_dia:C",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "esp32:D27",
+      "res_noite:1",
+      "blue",
+      []
+    ],
+    [
+      "res_noite:2",
+      "led_noite:A",
+      "blue",
+      []
+    ],
+    [
+      "led_noite:C",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "esp32:D5",
+      "buzzer1:1",
+      "orange",
+      []
+    ],
+    [
+      "buzzer1:2",
+      "esp32:GND",
+      "black",
+      []
+    ],
+    [
+      "esp32:D21",
+      "oled1:SDA",
+      "blue",
+      []
+    ],
+    [
+      "esp32:D22",
+      "oled1:SCL",
+      "cyan",
+      []
+    ],
+    [
+      "esp32:3V3",
+      "oled1:VCC",
+      "red",
+      []
+    ],
+    [
+      "esp32:GND",
+      "oled1:GND",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

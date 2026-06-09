@@ -1,0 +1,6 @@
+
+dhtESP32-rmt
+PubSubClient
+ArduinoJson
+Adafruit SSD1306
+DHT sensor library for ESPx

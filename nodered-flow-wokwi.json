@@ -1,0 +1,522 @@
+[
+  {
+    "id": "tab_spacecrop",
+    "type": "tab",
+    "label": "SpaceCrop — Monitoramento Agrícola",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "broker_hivemq",
+    "type": "mqtt-broker",
+    "name": "HiveMQ Public",
+    "broker": "broker.hivemq.com",
+    "port": "1883",
+    "clientid": "nodered-spacecrop-01",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  },
+  {
+    "id": "ui_tab_spacecrop",
+    "type": "ui_tab",
+    "name": "SpaceCrop Monitor",
+    "icon": "spa",
+    "order": 1,
+    "disp": true
+  },
+  {
+    "id": "grp_leituras",
+    "type": "ui_group",
+    "name": "📊 Leituras em Tempo Real",
+    "label": "📊 Leituras em Tempo Real",
+    "tab": "ui_tab_spacecrop",
+    "order": 1,
+    "disp": true,
+    "width": 12,
+    "collapse": false
+  },
+  {
+    "id": "grp_alertas",
+    "type": "ui_group",
+    "name": "🚨 Alertas e Condição",
+    "label": "🚨 Alertas e Condição",
+    "tab": "ui_tab_spacecrop",
+    "order": 2,
+    "disp": true,
+    "width": 12,
+    "collapse": false
+  },
+  {
+    "id": "grp_graficos",
+    "type": "ui_group",
+    "name": "📈 Histórico de Dados",
+    "label": "📈 Histórico de Dados",
+    "tab": "ui_tab_spacecrop",
+    "order": 3,
+    "disp": true,
+    "width": 12,
+    "collapse": false
+  },
+  {
+    "id": "grp_info",
+    "type": "ui_group",
+    "name": "🌾 Informações do Campo",
+    "label": "🌾 Informações do Campo",
+    "tab": "ui_tab_spacecrop",
+    "order": 4,
+    "disp": true,
+    "width": 12,
+    "collapse": false
+  },
+  {
+    "id": "mqtt_leitura",
+    "type": "mqtt in",
+    "z": "tab_spacecrop",
+    "name": "MQTT: spacecrop/leitura",
+    "topic": "spacecrop/leitura",
+    "qos": "0",
+    "broker": "broker_hivemq",
+    "x": 140,
+    "y": 160,
+    "wires": [
+      [
+        "fn_parse_leitura"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_alerta",
+    "type": "mqtt in",
+    "z": "tab_spacecrop",
+    "name": "MQTT: spacecrop/alerta",
+    "topic": "spacecrop/alerta",
+    "qos": "0",
+    "broker": "broker_hivemq",
+    "x": 140,
+    "y": 280,
+    "wires": [
+      [
+        "fn_parse_alerta"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_status",
+    "type": "mqtt in",
+    "z": "tab_spacecrop",
+    "name": "MQTT: spacecrop/status",
+    "topic": "spacecrop/status",
+    "qos": "0",
+    "broker": "broker_hivemq",
+    "x": 140,
+    "y": 400,
+    "wires": [
+      [
+        "fn_parse_status"
+      ]
+    ]
+  },
+  {
+    "id": "fn_parse_leitura",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Parse Leitura",
+    "func": "var d = msg.payload;\nif (typeof d === 'string') {\n    try { d = JSON.parse(d); } catch(e) { node.error('JSON invalido'); return null; }\n}\n\n// Mapeia campo 'status' do sketch para os campos esperados pelo Node-RED\nvar statusMap = {\n    'IDEAL':    { condicao: 'Condições ideais para plantação',  boa: true,  cod: 'IDEAL'    },\n    'GEADA':    { condicao: 'Risco de geada!',                  boa: false, cod: 'GEADA'    },\n    'CALOR':    { condicao: 'Calor excessivo!',                 boa: false, cod: 'CALOR'    },\n    'SECA':     { condicao: 'Seca severa!',                     boa: false, cod: 'SECA'     },\n    'ENCHARCA': { condicao: 'Encharcamento do solo!',           boa: false, cod: 'ENCHARCA' }\n};\nvar st = statusMap[d.status] || { condicao: d.status || '---', boa: false, cod: d.status || '???' };\nd.condicao        = st.condicao;\nd.condicao_boa    = st.boa;\nd.condicao_codigo = st.cod;\n\nmsg.payload = d;\nmsg.data    = d;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 380,
+    "y": 160,
+    "wires": [
+      [
+        "fn_roteador"
+      ]
+    ]
+  },
+  {
+    "id": "fn_parse_alerta",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Parse Alerta",
+    "func": "var d = msg.payload;\nif (typeof d === 'string') {\n    try { d = JSON.parse(d); } catch(e) { return null; }\n}\nmsg.payload = d;\nmsg.data    = d;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 380,
+    "y": 280,
+    "wires": [
+      [
+        "fn_alerta_texto"
+      ]
+    ]
+  },
+  {
+    "id": "fn_parse_status",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Parse Status",
+    "func": "var d = msg.payload;\nif (typeof d === 'string') {\n    try { d = JSON.parse(d); } catch(e) { return null; }\n}\nvar ip     = d.ip        || '---';\nvar rssi   = d.rssi      || '---';\nvar uptime = d.uptime_s  || '---';\nvar ts     = d.timestamp || '';\nmsg.payload = '📡 Online | IP: ' + ip + ' | RSSI: ' + rssi + ' dBm | Uptime: ' + uptime + 's | ' + ts;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 380,
+    "y": 400,
+    "wires": [
+      [
+        "text_dispositivo"
+      ]
+    ]
+  },
+  {
+    "id": "fn_roteador",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Roteador",
+    "func": "var d = msg.data || msg.payload;\nif (!d || typeof d !== 'object') return null;\nvar perIcon = (d.periodo === 'DIA') ? '☀️  DIA  (06h–17h59)' : '🌙  NOITE  (18h–05h59)';\nreturn [\n    { payload: d.temperatura },\n    { payload: d.umidade },\n    { payload: perIcon },\n    { payload: d.temperatura, topic: 'Temperatura' },\n    { payload: d.umidade,     topic: 'Umidade' },\n    { payload: d.periodo === 'DIA' ? 1 : 0, topic: 'Período' },\n    { data: d },\n    { data: d },\n    { data: d }\n];",
+    "outputs": 9,
+    "noerr": 0,
+    "x": 620,
+    "y": 160,
+    "wires": [
+      [
+        "gauge_temp"
+      ],
+      [
+        "gauge_umid"
+      ],
+      [
+        "text_periodo"
+      ],
+      [
+        "chart_temp"
+      ],
+      [
+        "chart_umid"
+      ],
+      [
+        "chart_periodo"
+      ],
+      [
+        "fn_status_campo"
+      ],
+      [
+        "fn_info_campo"
+      ],
+      [
+        "fn_condicao_led"
+      ]
+    ]
+  },
+  {
+    "id": "fn_status_campo",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Mensagem Status",
+    "func": "var d = msg.data;\nif (!d) return null;\nvar cult = d.cultura      || '---';\nvar temp = d.temperatura;\nvar umid = d.umidade;\nvar per  = d.periodo      || '---';\nvar leit = d.leitura      || '-';\nvar cond = d.condicao     || '---';\nvar boa  = (d.condicao_boa === true);\nvar perIcon = (per === 'DIA') ? '☀️ DIA' : '🌙 NOITE';\nvar ico     = boa ? '✅' : '⚠️';\nvar faixas  = {\n    'Soja':'20–30°C | 50–80%','Milho':'18–32°C | 50–75%',\n    'Trigo':'10–25°C | 40–70%','Cana':'20–35°C | 60–85%',\n    'Arroz':'20–35°C | 70–95%'\n};\nvar ref = faixas[cult] ? '  [Ideal: ' + faixas[cult] + ']' : '';\nmsg.payload = ico + ' ' + cond + ref +\n    '\\nTemp: ' + temp + '°C  |  Umid: ' + umid + '%' +\n    '  |  ' + perIcon + '  |  ' + cult + '  |  Leitura #' + leit;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 860,
+    "y": 80,
+    "wires": [
+      [
+        "text_status"
+      ]
+    ]
+  },
+  {
+    "id": "fn_info_campo",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Info do Campo",
+    "func": "var d = msg.data;\nif (!d) return null;\nvar cult    = d.cultura         || '---';\nvar per     = d.periodo         || '---';\nvar cod     = d.condicao_codigo || '---';\nvar leit    = d.leitura         || '-';\nvar ts      = d.timestamp       || '';\nvar perIcon = (per === 'DIA') ? '☀️ DIA' : '🌙 NOITE';\nmsg.payload = '🌾 ' + cult + '  |  ' + perIcon + '  |  Código: ' + cod + '  |  Leitura #' + leit + '  |  ' + ts;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 860,
+    "y": 160,
+    "wires": [
+      [
+        "text_info_campo"
+      ]
+    ]
+  },
+  {
+    "id": "fn_condicao_led",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Card Condição",
+    "func": "var d = msg.data;\nif (!d) return null;\nvar cond    = d.condicao     || '---';\nvar boa     = (d.condicao_boa === true);\nvar cult    = d.cultura      || '---';\nvar per     = d.periodo      || '---';\nvar temp    = d.temperatura;\nvar umid    = d.umidade;\nvar perIcon = (per === 'DIA') ? '☀️' : '🌙';\nvar bg      = boa ? '#1a6e37' : '#a93226';\nvar ico     = boa ? '✅' : '🚨';\nvar titulo  = boa ? 'CONDIÇÃO BOA PARA PLANTAÇÃO' : 'CONDIÇÃO RUIM PARA PLANTAÇÃO';\nmsg.payload =\n    '<div style=\"background:' + bg + ';color:#fff;padding:16px;border-radius:10px;text-align:center\">' +\n    '<div style=\"font-size:22px;font-weight:bold\">' + ico + ' ' + titulo + '</div>' +\n    '<div style=\"font-size:15px;margin:6px 0\">' + cond + '</div>' +\n    '<div style=\"font-size:13px;opacity:.85\">' + cult + ' &nbsp;|&nbsp; ' + perIcon + ' ' + per +\n    ' &nbsp;|&nbsp; ' + temp + '°C &nbsp;|&nbsp; ' + umid + '%</div>' +\n    '</div>';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 860,
+    "y": 240,
+    "wires": [
+      [
+        "ui_cond_status"
+      ]
+    ]
+  },
+  {
+    "id": "fn_alerta_texto",
+    "type": "function",
+    "z": "tab_spacecrop",
+    "name": "Texto Alerta",
+    "func": "var d = msg.data;\nif (!d) return null;\nvar boa     = d.alerta_ativo === false;\nvar cond    = d.condicao     || '---';\nvar cult    = d.cultura      || '---';\nvar temp    = d.temperatura;\nvar umid    = d.umidade;\nvar per     = d.periodo      || '---';\nvar mot     = d.motivo       || '';\nvar leit    = d.leitura      || '-';\nvar ts      = d.timestamp    || '';\nvar perIcon = (per === 'DIA') ? '☀️ DIA' : '🌙 NOITE';\nvar ico     = boa ? '✅' : '🚨';\nvar linhas  = [\n    ico + ' ' + cond,\n    'Cultura: ' + cult + ' | ' + perIcon,\n    'Temp: ' + temp + '°C | Umid: ' + umid + '%'\n];\nif (mot) linhas.push('Detalhe: ' + mot);\nlinhas.push('Leitura #' + leit + ' — ' + ts);\nvar texto = linhas.join('\\n');\nreturn [\n    { payload: texto },\n    (!boa) ? { payload: texto } : null\n];",
+    "outputs": 2,
+    "noerr": 0,
+    "x": 860,
+    "y": 340,
+    "wires": [
+      [
+        "text_alerta_mqtt"
+      ],
+      [
+        "toast_alerta"
+      ]
+    ]
+  },
+  {
+    "id": "gauge_temp",
+    "type": "ui_gauge",
+    "z": "tab_spacecrop",
+    "name": "Temperatura",
+    "group": "grp_leituras",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "gtype": "gage",
+    "title": "Temperatura",
+    "label": "°C",
+    "format": "{{value}}°C",
+    "min": "-10",
+    "max": "50",
+    "seg1": "5",
+    "seg2": "35",
+    "x": 1100,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "gauge_umid",
+    "type": "ui_gauge",
+    "z": "tab_spacecrop",
+    "name": "Umidade",
+    "group": "grp_leituras",
+    "order": 2,
+    "width": 6,
+    "height": 4,
+    "gtype": "gage",
+    "title": "Umidade",
+    "label": "%",
+    "format": "{{value}}%",
+    "min": "0",
+    "max": "100",
+    "seg1": "30",
+    "seg2": "90",
+    "x": 1100,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "text_periodo",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Período",
+    "group": "grp_leituras",
+    "order": 3,
+    "width": 12,
+    "height": 1,
+    "label": "Período do Dia",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 1100,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "text_status",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Status Campo",
+    "group": "grp_alertas",
+    "order": 2,
+    "width": 12,
+    "height": 2,
+    "label": "Status",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "x": 1100,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "ui_cond_status",
+    "type": "ui_template",
+    "z": "tab_spacecrop",
+    "name": "Card Condição",
+    "group": "grp_alertas",
+    "order": 1,
+    "width": 12,
+    "height": 3,
+    "format": "<div ng-bind-html=\"msg.payload | trusted\"></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "x": 1100,
+    "y": 300,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "text_alerta_mqtt",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Alerta MQTT",
+    "group": "grp_alertas",
+    "order": 3,
+    "width": 12,
+    "height": 3,
+    "label": "Último Alerta",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "x": 1100,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "toast_alerta",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Alerta Ativo",
+    "group": "grp_alertas",
+    "order": 4,
+    "width": 12,
+    "height": 3,
+    "label": "🔔 Alerta Ativo",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "x": 1100,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "text_info_campo",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Info Campo",
+    "group": "grp_info",
+    "order": 1,
+    "width": 12,
+    "height": 1,
+    "label": "Campo",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 1100,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "text_dispositivo",
+    "type": "ui_text",
+    "z": "tab_spacecrop",
+    "name": "Dispositivo",
+    "group": "grp_info",
+    "order": 2,
+    "width": 12,
+    "height": 1,
+    "label": "Dispositivo",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 1100,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "chart_temp",
+    "type": "ui_chart",
+    "z": "tab_spacecrop",
+    "name": "Gráfico Temp",
+    "group": "grp_graficos",
+    "order": 1,
+    "width": 12,
+    "height": 4,
+    "label": "Temperatura (°C)",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "Aguardando...",
+    "dot": true,
+    "ymin": "-10",
+    "ymax": "50",
+    "removeOlder": 1,
+    "removeOlderPoints": "60",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "colors": [
+      "#e74c3c"
+    ],
+    "x": 1100,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "chart_umid",
+    "type": "ui_chart",
+    "z": "tab_spacecrop",
+    "name": "Gráfico Umid",
+    "group": "grp_graficos",
+    "order": 2,
+    "width": 12,
+    "height": 4,
+    "label": "Umidade (%)",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "Aguardando...",
+    "dot": true,
+    "ymin": "0",
+    "ymax": "100",
+    "removeOlder": 1,
+    "removeOlderPoints": "60",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "colors": [
+      "#3498db"
+    ],
+    "x": 1100,
+    "y": 660,
+    "wires": []
+  },
+  {
+    "id": "chart_periodo",
+    "type": "ui_chart",
+    "z": "tab_spacecrop",
+    "name": "Período Dia/Noite",
+    "group": "grp_graficos",
+    "order": 3,
+    "width": 12,
+    "height": 3,
+    "label": "Período — 1=DIA / 0=NOITE",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "step",
+    "nodata": "Aguardando...",
+    "dot": true,
+    "ymin": "-0.2",
+    "ymax": "1.2",
+    "removeOlder": 1,
+    "removeOlderPoints": "60",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "colors": [
+      "#f39c12"
+    ],
+    "x": 1100,
+    "y": 720,
+    "wires": []
+  }
+]
